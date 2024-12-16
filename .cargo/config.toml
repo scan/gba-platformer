@@ -1,0 +1,26 @@
+[unstable]
+build-std = ["core", "alloc"]
+build-std-features = ["compiler-builtins-mem"]
+
+[build]
+target = "thumbv4t-none-eabi"
+
+[target.thumbv4t-none-eabi]
+rustflags = [
+    # @see https://github.com/mvdnes/spin-rs#feature-flags
+    "--cfg", "portable_atomic_unsafe_assume_single_core",
+    "-Clink-arg=-Tgba.ld",
+    "-Ctarget-cpu=arm7tdmi",
+    "-Cforce-frame-pointers=yes",
+]
+runner = ["mgba", "-C", "logToStdout=1", "-C", "logLevel.gba.debug=127"]
+
+[target.armv4t-none-eabi]
+rustflags = [
+    # @see https://github.com/mvdnes/spin-rs#feature-flags
+    "--cfg", "portable_atomic_unsafe_assume_single_core",
+    "-Clink-arg=-Tgba.ld",
+    "-Ctarget-cpu=arm7tdmi",
+    "-Cforce-frame-pointers=yes",
+]
+runner = ["mgba", "-C", "logToStdout=1", "-C", "logLevel.gba.debug=127"]

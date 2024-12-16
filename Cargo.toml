@@ -1,0 +1,23 @@
+[package]
+name = "gba-platformer"
+publish = false
+version = "0.1.0"
+edition = "2021"
+
+[profile.dev]
+opt-level = 3
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+debug = true
+
+[dependencies]
+agb = { version = "0.21.1" }
+slotmap = { version = "1.0.7", default-features = false }
+
+[dev-dependencies]
+proc-macro2 = "1.0.92"
+quote = "1.0.37"
+tiled = { version = "0.13.0", default-features = false }
