@@ -1,3 +1,5 @@
 /target
 .DS_Store
 *.gba
+
+*.tiled-session
