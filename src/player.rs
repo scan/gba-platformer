@@ -21,7 +21,7 @@ impl Into<bool> for Direction {
 #[derive(Clone)]
 pub struct Player<'a> {
     direction: Direction,
-    position: Vector2D<FixedNum>,
+    pub position: Vector2D,
 
     object_sprite: Rc<RefCell<Object<'a>>>,
 }
@@ -35,7 +35,7 @@ impl<'a> Player<'a> {
         }
     }
 
-    pub fn translate(&mut self, diff: FixedNum) {
+    pub fn translate_x(&mut self, diff: FixedNum) {
         self.direction = if diff >= num!(0.0) {
             Direction::RIGHT
         } else {
@@ -44,10 +44,14 @@ impl<'a> Player<'a> {
         self.position.x += diff;
     }
 
+    pub fn fall(&mut self) {
+        self.position.y += num!(1.6);
+    }
+
     pub fn update(&mut self) {
         let mut obj = self.object_sprite.borrow_mut();
 
-        obj.set_position((self.position.x.floor(), self.position.y.floor()));
+        obj.set_position((self.position.x.trunc(), self.position.y.trunc()));
         obj.set_hflip(self.direction.into());
         obj.show();
     }

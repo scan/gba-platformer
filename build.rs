@@ -6,20 +6,39 @@ use std::{
     env,
     fs::File,
     io::{BufWriter, Write},
-    iter,
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
 };
 
 fn main() {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let base_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
 
-    let level_filename = "map/level01.tmx";
-    let output = create_tilemap_info(level_filename);
+    let level_files = glob(&format!("{base_dir}/map/*.tmx"))
+        .expect("failed to read map files")
+        .map(|entry| entry.unwrap())
+        .collect::<Vec<_>>();
+
+    let output = TokenStream::from_iter(level_files.iter().map(|level_file| {
+        let level_filename = level_file.to_str().unwrap();
+        create_tilemap_info(level_filename)
+    }));
 
     let output_file = File::create(format!("{out_dir}/tilemap.rs"))
         .expect("failed to open tilemap.rs file for writing");
     let mut writer = BufWriter::new(output_file);
+
+    let output = quote! {
+        #[derive(Clone, Copy)]
+        pub struct TilemapInfo<'a> {
+            pub background_data: &'a [u16],
+            pub foreground_data: &'a [u16],
+            pub size: (u32, u32),
+            pub tile_types: &'a [u8],
+        }
+
+        #output
+    };
 
     write!(&mut writer, "{output}").unwrap();
 }
@@ -69,13 +88,21 @@ fn create_tilemap_info(level_filename: &str) -> TokenStream {
     let width_var = format_ident!("{}_WIDTH", var_prefix);
     let height_var = format_ident!("{}_HEIGHT", var_prefix);
     let tile_types_var = format_ident!("{}_TILE_TYPES", var_prefix);
+    let info_var = format_ident!("{}_INFO", var_prefix);
 
     let output = quote! {
-        pub static #background_map_var: &[u16] = &[#(#background_tiles),*];
-        pub static #foreground_map_var: &[u16] = &[#(#foreground_tiles),*];
-        pub const #width_var: i32 = #width as i32;
-        pub const #height_var: i32 = #height as i32;
-        pub static #tile_types_var: &[u8] = &[#(#tile_types),*];
+        pub const #background_map_var: &[u16] = &[#(#background_tiles),*];
+        pub const #foreground_map_var: &[u16] = &[#(#foreground_tiles),*];
+        pub const #width_var: u32 = #width;
+        pub const #height_var: u32 = #height;
+        pub const #tile_types_var: &[u8] = &[#(#tile_types),*];
+
+        pub const #info_var: TilemapInfo<'static> = TilemapInfo {
+            background_data: &#background_map_var,
+            foreground_data: &#foreground_map_var,
+            size: (#width_var, #height_var),
+            tile_types: &#tile_types_var,
+        };
     };
 
     output
@@ -83,8 +110,8 @@ fn create_tilemap_info(level_filename: &str) -> TokenStream {
 
 fn extract_tiles<'a>(layer: &'a tiled::TileLayer) -> impl Iterator<Item = u16> + 'a {
     match layer {
-        tiled::TileLayer::Finite(tiles) => (0..tiles.height() - 1)
-            .flat_map(move |y| (0..tiles.width() - 1).map(move |x| (y, x)))
+        tiled::TileLayer::Finite(tiles) => (0..tiles.height())
+            .flat_map(move |y| (0..tiles.width()).map(move |x| (y, x)))
             .map(move |(y, x)| tiles.get_tile_data(x as i32, y as i32))
             .map(|tile| tile.map(|tile| tile.id()).unwrap_or(0)),
         _ => unimplemented!("Infinite layers not supported"),
@@ -95,6 +122,6 @@ fn extract_tiles<'a>(layer: &'a tiled::TileLayer) -> impl Iterator<Item = u16> +
 fn get_map_id(tile_id: u32) -> u16 {
     match tile_id {
         0 => 0,
-        i => i as u16 - 1,
+        i => i as u16,
     }
 }
